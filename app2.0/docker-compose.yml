@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine # Using alpine version for smaller size
+    restart: always
+    environment:
+      # Security Requirement 2: Environment variables for DB credentials
+      POSTGRES_USER: user_counter
+      POSTGRES_PASSWORD: supersecretpassword
+      POSTGRES_DB: visit_db
+    volumes:
+      # Persistence Requirement 3: Data persistence using a named volume
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      # Expose port for optional direct access (not strictly required by app)
+      - "5432:5432"
+
+  app:
+    build: .
+    restart: always
+    ports:
+      # Expose app port
+      - "8000:8000"
+    environment:
+      # Security Requirement 2: Environment variables for app to connect to DB
+      # Networking Requirement 1: DB_HOST is the service name 'db'
+      DB_HOST: db
+      DB_NAME: visit_db
+      DB_USER: user_counter
+      DB_PASSWORD: supersecretpassword
+    depends_on:
+      - db
+    # Wait for the database to be ready before starting the app (best practice)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_counter -d visit_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  # Define the named volume for persistence
+  postgres_data:
